@@ -1,7 +1,17 @@
 rule_files:
   - "alert.rules.yml"
-
+scrape_configs:
+  - job_name: 'wg-easy'
+    scrape_interval: 30s
+    metrics_path: /metrics/prometheus
+    static_configs:
+        - targets:
+          - '109.123.232.186:51821'
+    authorization:
+      type: Bearer
+      credentials: 'SuperSecurePassword'
 alerting:
   alertmanagers:
     - static_configs:
-        - targets: ['alertmanager:9093']
+        - targets: ['109.123.232.186:9093']
+

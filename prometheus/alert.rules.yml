@@ -9,3 +9,13 @@ groups:
         annotations:
           summary: "No VPN clients have connected for over 5 minutes"
           description: "Check if the WireGuard server is working properly."
+
+      - alert: VPNClientConnected
+        expr: wg_peer_receive_bytes > 0
+        for: 1m
+        labels:
+          severity: info
+        annotations:
+          summary: "VPN client is connected"
+          description: "At least one WireGuard client has successfully connected."
+

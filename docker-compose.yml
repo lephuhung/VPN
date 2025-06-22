@@ -2,17 +2,21 @@ version: "3.8"
 
 services:
   wireguard:
-    image: ghcr.io/wg-easy/wg-easy:14.0.0
-    container_name: wg-easy
+    build:
+      context: .
+      dockerfile: wg-easy.dockerfile
+    container_name: wg-easy-15
     environment:
-      - WG_HOST=109.123.232.186
-      - PASSWORD_HASH='$$2a$12$qY1RksCo6D2MYw0sRnJhU.pUmC9w8T8YmSrF59AMPYatOXYp7.iGy'
-      - WG_ALLOWED_IPS=10.10.0.0/24,10.8.0.0/24
-      - WG_DEFAULT_DNS=10.10.0.48
-      - WG_LISTEN_PORT=51820
+      - HOST=0.0.0.0
+      - INSECURE=true
+      - PORT=51821
     ports:
       - "51820:51820/udp"
       - "51821:51821/tcp"
+    networks:
+      wg:
+        ipv4_address: 10.42.42.42
+        ipv6_address: fdcc:ad94:bacf:61a3::2a
     volumes:
       - ./wireguard:/etc/wireguard
     cap_add:
@@ -21,6 +25,9 @@ services:
     sysctls:
       - net.ipv4.ip_forward=1
       - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.disable_ipv6=0
+      - net.ipv6.conf.all.forwarding=1
+      - net.ipv6.conf.default.forwarding=1
     restart: unless-stopped
     labels:
       - "prometheus.job=wireguard"
@@ -43,9 +50,11 @@ services:
     volumes:
       - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
     environment:
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - TELEGRAM_BOT_TOKEN=7220335549:AAHKnCVnoqKnUc5vS1bhyX_UXDxCM5-Z5Mo
+      - TELEGRAM_CHAT_ID=957114598
     restart: unless-stopped
+    networks:
+      - wg
 
   grafana:
     image: grafana/grafana
@@ -74,5 +83,28 @@ services:
       - ./nginx/.htpasswd:/etc/nginx/.htpasswd
     restart: unless-stopped
 
+  # telegram-bot:
+  #     image: metalmatze/alertmanager-bot
+  #     container_name: telegram-bot
+  #     # ports:
+  #     #   - "8080:8080"
+  #     environment:
+  #       LERTMANAGER_URL: "http://alertmanager:9093"
+  #       LISTEN_ADDR: "0.0.0.0:8080"
+  #       TELEGRAM_TOKEN: "7220335549:AAHKnCVnoqKnUc5vS1bhyX_UXDxCM5-Z5Mo"
+  #       TELEGRAM_CHAT_ID: "957114598"
+  #     restart: unless-stopped
+  #     networks:
+  #       - wg
+
+networks:
+  wg:
+    driver: bridge
+    enable_ipv6: true
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.42.42.0/24
+        - subnet: fdcc:ad94:bacf:61a3::/64
 volumes:
   grafana-storage:

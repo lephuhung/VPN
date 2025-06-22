@@ -1,0 +1,11 @@
+groups:
+  - name: wireguard-alerts
+    rules:
+      - alert: NoClientsConnected
+        expr: wg_peer_receive_bytes == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No VPN clients have connected for over 5 minutes"
+          description: "Check if the WireGuard server is working properly."

@@ -1,37 +1,27 @@
-version: "3.8"
-
 services:
-  wireguard:
+  wg-easy:
     build:
-      context: .
-      dockerfile: wg-easy.dockerfile
-    container_name: wg-easy-15
-    environment:
-      - HOST=0.0.0.0
-      - INSECURE=true
-      - PORT=51821
+      dockerfile: Dockerfile.dev
+    command: dev
+    volumes:
+      - ./src/:/app/
+      - temp:/app/.nuxt/
+      - temp1:/app/node_modules/
+      - /lib/modules:/lib/modules:ro
+      - ./data/:/etc/wireguard
     ports:
       - "51820:51820/udp"
       - "51821:51821/tcp"
-    networks:
-      wg:
-        ipv4_address: 10.42.42.42
-        ipv6_address: fdcc:ad94:bacf:61a3::2a
-    volumes:
-      - ./wireguard:/etc/wireguard
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
-    sysctls:
-      - net.ipv4.ip_forward=1
-      - net.ipv4.conf.all.src_valid_mark=1
-      - net.ipv6.conf.all.disable_ipv6=0
-      - net.ipv6.conf.all.forwarding=1
-      - net.ipv6.conf.default.forwarding=1
-    restart: unless-stopped
-    labels:
-      - "prometheus.job=wireguard"
-
+    environment:
+      - INIT_ENABLED=true
+      - INIT_HOST=0.0.0.0
+      - INIT_PORT=51820
+      - DISABLE_IPV6=true
+      - INIT_USERNAME=lephuhung77@gmail.com
+      - INIT_PASSWORD=Galaxynote8@
   prometheus:
     image: prom/prometheus
     container_name: prometheus
@@ -71,32 +61,6 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     restart: unless-stopped
 
-  nginx:
-    image: nginx
-    container_name: nginx-prometheus-auth
-    depends_on:
-      - prometheus
-    ports:
-      - "9091:80"
-    volumes:
-      - ./nginx/prometheus.conf:/etc/nginx/conf.d/default.conf
-      - ./nginx/.htpasswd:/etc/nginx/.htpasswd
-    restart: unless-stopped
-
-  # telegram-bot:
-  #     image: metalmatze/alertmanager-bot
-  #     container_name: telegram-bot
-  #     # ports:
-  #     #   - "8080:8080"
-  #     environment:
-  #       LERTMANAGER_URL: "http://alertmanager:9093"
-  #       LISTEN_ADDR: "0.0.0.0:8080"
-  #       TELEGRAM_TOKEN: "7220335549:AAHKnCVnoqKnUc5vS1bhyX_UXDxCM5-Z5Mo"
-  #       TELEGRAM_CHAT_ID: "957114598"
-  #     restart: unless-stopped
-  #     networks:
-  #       - wg
-
 networks:
   wg:
     driver: bridge
@@ -106,5 +70,11 @@ networks:
       config:
         - subnet: 10.42.42.0/24
         - subnet: fdcc:ad94:bacf:61a3::/64
+
+# folders should be generated inside container
 volumes:
   grafana-storage:
+  temp:
+    driver: local
+  temp1:
+    driver: local

@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   traefik:
-    image: traefik:v2.11
+    image: traefik:v3.5
     container_name: traefik
     command:
       - "--api.dashboard=true"
@@ -14,10 +14,13 @@ services:
       - "--certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web"
       - "--certificatesresolvers.myresolver.acme.email=xaydung56cd5@gmail.com"
       - "--certificatesresolvers.myresolver.acme.storage=/acme.json"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--log.level=DEBUG"
     ports:
       - "80:80"
       - "443:443"
-      - "8080:8080"
+      - "8088:8080"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "./traefik/acme.json:/acme.json"
@@ -33,7 +36,8 @@ services:
 
   wg-easy:
     image: ghcr.io/wg-easy/wg-easy:15.1
-    container_name: wg-easy.15.1
+    container_name: wg-easy
+    restart: unless-stopped
     volumes:
       - ./data/:/etc/wireguard
     ports:
@@ -50,11 +54,11 @@ services:
       - INIT_PASSWORD=Galaxynote8@
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.wgeasy.rule=Host(`vpn.hypersofts.vn`)"
-      - "traefik.http.routers.wgeasy.entrypoints=websecure"
-      - "traefik.http.routers.wgeasy.tls=true"
-      - "traefik.http.routers.wgeasy.tls.certresolver=myresolver"
-      - "traefik.http.services.wgeasy.loadbalancer.server.port=51821"
+      - "traefik.http.routers.wg-easy.rule=Host(`vpn.hypersofts.vn`)"
+      - "traefik.http.routers.wg-easy.entrypoints=websecure"
+      - "traefik.http.routers.wg-easy.tls=true"
+      - "traefik.http.routers.wg-easy.tls.certresolver=myresolver"
+      - "traefik.http.services.wg-easy.loadbalancer.server.port=51821"
     networks:
       - traefik
 

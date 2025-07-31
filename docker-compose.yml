@@ -1,4 +1,36 @@
+version: '3.8'
+
 services:
+  traefik:
+    image: traefik:v2.11
+    container_name: traefik
+    command:
+      - "--api.dashboard=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--certificatesresolvers.myresolver.acme.httpchallenge=true"
+      - "--certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.myresolver.acme.email=xaydung56cd5@gmail.com"
+      - "--certificatesresolvers.myresolver.acme.storage=/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./traefik/acme.json:/acme.json"
+    networks:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.hypersofts.vn`)"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.tls=true"
+      - "traefik.http.routers.traefik.tls.certresolver=myresolver"
+      - "traefik.http.routers.traefik.service=api@internal"
+
   wg-easy:
     image: ghcr.io/wg-easy/wg-easy:15.1
     container_name: wg-easy.15.1
@@ -6,7 +38,6 @@ services:
       - ./data/:/etc/wireguard
     ports:
       - "51820:51820/udp"
-      - "51821:51821/tcp"
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
@@ -17,28 +48,51 @@ services:
       - DISABLE_IPV6=true
       - INIT_USERNAME=lephuhung77@gmail.com
       - INIT_PASSWORD=Galaxynote8@
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.wgeasy.rule=Host(`vpn.hypersofts.vn`)"
+      - "traefik.http.routers.wgeasy.entrypoints=websecure"
+      - "traefik.http.routers.wgeasy.tls=true"
+      - "traefik.http.routers.wgeasy.tls.certresolver=myresolver"
+      - "traefik.http.services.wgeasy.loadbalancer.server.port=51821"
+    networks:
+      - traefik
+
   prometheus:
     image: prom/prometheus
     container_name: prometheus
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - ./prometheus/alert.rules.yml:/etc/prometheus/alert.rules.yml
-    ports:
-      - "9090:9090"
     restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.hypersofts.vn`)"
+      - "traefik.http.routers.prometheus.entrypoints=websecure"
+      - "traefik.http.routers.prometheus.tls=true"
+      - "traefik.http.routers.prometheus.tls.certresolver=myresolver"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+    networks:
+      - traefik
 
   alertmanager:
     image: prom/alertmanager
     container_name: alertmanager
-    ports:
-      - "9093:9093"
     volumes:
       - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
     environment:
       - TELEGRAM_BOT_TOKEN=7220335549:AAHKnCVnoqKnUc5vS1bhyX_UXDxCM5-Z5Mo
       - TELEGRAM_CHAT_ID=957114598
     restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.alertmanager.rule=Host(`alertmanager.hypersofts.vn`)"
+      - "traefik.http.routers.alertmanager.entrypoints=websecure"
+      - "traefik.http.routers.alertmanager.tls=true"
+      - "traefik.http.routers.alertmanager.tls.certresolver=myresolver"
+      - "traefik.http.services.alertmanager.loadbalancer.server.port=9093"
     networks:
+      - traefik
       - wg
 
   grafana:
@@ -46,8 +100,6 @@ services:
     container_name: grafana
     depends_on:
       - prometheus
-    ports:
-      - "3000:3000"
     volumes:
       - grafana-storage:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning
@@ -55,6 +107,15 @@ services:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
     restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.hypersofts.vn`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.routers.grafana.tls.certresolver=myresolver"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+    networks:
+      - traefik
 
 networks:
   wg:
@@ -65,8 +126,9 @@ networks:
       config:
         - subnet: 10.42.42.0/24
         - subnet: fdcc:ad94:bacf:61a3::/64
+  traefik:
+    driver: bridge
 
-# folders should be generated inside container
 volumes:
   grafana-storage:
   temp:
